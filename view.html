@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Body Records</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e8e8e8;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #555 0%, #333 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-buttons a {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .header-buttons a:hover {
+            background-color: #45a049;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table thead {
+            background-color: #f5f5f5;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .body-id {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            table th, table td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Body Records</h1>
+            <div class="header-buttons">
+                <a href="/dashboard">➕ Add New Record</a>
+                <a href="/">🚪 Logout</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="errorContainer"></div>
+            <div id="loadingContainer" class="loading">Loading records...</div>
+            <div id="tableContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch all body records
+        async function loadRecords() {
+            try {
+                const response = await fetch('http://localhost:5000/api/bodies/all');
+                const result = await response.json();
+
+                const loadingContainer = document.getElementById('loadingContainer');
+                const tableContainer = document.getElementById('tableContainer');
+                const errorContainer = document.getElementById('errorContainer');
+
+                if (result.success && result.data.length > 0) {
+                    loadingContainer.style.display = 'none';
+                    let html = `
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Body ID</th>
+                                        <th>Height (m)</th>
+                                        <th>Weight (kg)</th>
+                                        <th>Age</th>
+                                        <th>Skin Tone</th>
+                                        <th>Gender</th>
+                                        <th>Storage Unit</th>
+                                        <th>Admission Date</th>
+                                        <th>Marks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    result.data.forEach(record => {
+                        const admissionDate = new Date(record.admission_date).toLocaleString();
+                        const marks = record.distinguishing_marks ? record.distinguishing_marks.substring(0, 30) : 'None';
+                        html += `
+                            <tr>
+                                <td class="body-id">${record.body_id}</td>
+                                <td>${record.height}</td>
+                                <td>${record.weight}</td>
+                                <td>${record.age}</td>
+                                <td>${record.skin_tone}</td>
+                                <td>${record.gender}</td>
+                                <td>${record.storage_unit}</td>
+                                <td>${admissionDate}</td>
+                                <td>${marks}${record.distinguishing_marks && record.distinguishing_marks.length > 30 ? '...' : ''}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    tableContainer.innerHTML = html;
+                } else if (result.success && result.data.length === 0) {
+                    loadingContainer.style.display = 'none';
+                    tableContainer.innerHTML = '<div class="no-data"><p>No body records found. Start by adding a new record.</p></div>';
+                } else {
+                    errorContainer.innerHTML = `<div class="error">❌ Error: ${result.message}</div>`;
+                    loadingContainer.style.display = 'none';
+                }
+            } catch (error) {
+                document.getElementById('errorContainer').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                document.getElementById('loadingContainer').style.display = 'none';
+            }
+        }
+
+        // Load records on page load
+        window.addEventListener('DOMContentLoaded', loadRecords);
+    </script>
+</body>
+</html>

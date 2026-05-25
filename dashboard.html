@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Morgue Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #ecf0f1 0%, #f5f6fa 100%); min-height: 100vh; color: #2c3e50; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%); box-shadow: 2px 0 10px rgba(0,0,0,0.1); overflow-y: auto; z-index: 1000; transition: transform 0.3s ease; }
+        .sidebar-header { padding: 24px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 12px; }
+        .sidebar-logo { width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .sidebar-title { color: white; font-weight: 700; font-size: 16px; }
+        .sidebar-menu { list-style: none; padding: 16px 0; }
+        .sidebar-menu-link { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.7); text-decoration: none; padding: 14px 20px; transition: all 0.3s ease; border-left: 3px solid transparent; cursor: pointer; }
+        .sidebar-menu-link:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar-menu-link.active { background: rgba(255,255,255,0.15); border-left-color: #3498db; color: white; }
+        .sidebar-menu-icon { font-size: 18px; width: 24px; }
+        .main-content { margin-left: 250px; }
+        .navbar { background: white; padding: 16px 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 999; }
+        .navbar-left { display: flex; align-items: center; gap: 16px; }
+        .menu-toggle { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #34495e; }
+        .navbar-title { font-size: 20px; font-weight: 700; color: #2c3e50; }
+        .navbar-right { display: flex; align-items: center; gap: 20px; }
+        .search-box { display: flex; align-items: center; background: #f5f6fa; border-radius: 8px; padding: 8px 16px; gap: 8px; }
+        .search-box input { background: none; border: none; outline: none; width: 200px; color: #2c3e50; font-size: 14px; }
+        .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #7f8c8d; position: relative; }
+        .notification-badge { position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+        .user-profile { display: flex; align-items: center; gap: 12px; border-left: 1px solid #ecf0f1; padding-left: 20px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; }
+        .user-name { font-weight: 600; font-size: 14px; }
+        .user-role { font-size: 12px; color: #95a5a6; }
+        .container { padding: 30px; }
+        .page-title { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 8px; }
+        .page-subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 30px; }
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #ecf0f1; transition: all 0.3s; }
+        .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .stat-icon { font-size: 32px; margin-bottom: 12px; }
+        .stat-label { font-size: 12px; color: #95a5a6; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #2c3e50; }
+        /* Storage capacity bars */
+        .storage-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .storage-type-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #ecf0f1; }
+        .storage-type-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .storage-type-name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        .storage-avail-count { font-size: 22px; font-weight: 700; }
+        .storage-avail-count.good { color: #27ae60; }
+        .storage-avail-count.warn { color: #f39c12; }
+        .storage-avail-count.full { color: #e74c3c; }
+        .progress-bar-wrap { background: #ecf0f1; border-radius: 20px; height: 10px; overflow: hidden; margin: 8px 0; }
+        .progress-bar-fill { height: 100%; border-radius: 20px; transition: width 0.6s ease; }
+        .fill-good { background: linear-gradient(90deg,#27ae60,#2ecc71); }
+        .fill-warn { background: linear-gradient(90deg,#f39c12,#f1c40f); }
+        .fill-full { background: linear-gradient(90deg,#c0392b,#e74c3c); }
+        .storage-meta { font-size: 12px; color: #95a5a6; }
+        /* Cards & tables */
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #ecf0f1; margin-bottom: 24px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #ecf0f1; }
+        .card-title { font-size: 18px; font-weight: 700; color: #2c3e50; display: flex; align-items: center; gap: 10px; }
+        .table-responsive { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table thead th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-weight: 700; color: #2c3e50; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #ecf0f1; }
+        .table tbody td { padding: 12px 14px; border-bottom: 1px solid #ecf0f1; font-size: 14px; color: #34495e; }
+        .table tbody tr:hover { background: #f8f9fa; }
+        .badge { display: inline-block; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .badge-success { background: #d5f4e6; color: #27ae60; }
+        .badge-warning { background: #fef5e7; color: #f39c12; }
+        .badge-danger  { background: #fadbd8; color: #e74c3c; }
+        .badge-info    { background: #d6eaf8; color: #3498db; }
+        /* Forms */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 16px; }
+        label { font-weight: 600; font-size: 12px; color: #2c3e50; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+            padding: 10px 12px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px;
+            font-family: inherit; color: #2c3e50; width: 100%; transition: border 0.2s;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #34495e; box-shadow: 0 0 0 3px rgba(52,73,94,0.1); }
+        input.field-error, select.field-error, textarea.field-error { border-color: #e74c3c; }
+        textarea { resize: vertical; min-height: 80px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #34495e, #2c3e50); color: white; }
+        .btn-primary:hover { box-shadow: 0 4px 12px rgba(52,73,94,0.3); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: #ecf0f1; color: #2c3e50; border: 2px solid #bdc3c7; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        /* Alert */
+        .alert { padding: 14px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+        .alert-success { background: #d5f4e6; color: #27ae60; border-left-color: #27ae60; }
+        .alert-error   { background: #fadbd8; color: #e74c3c; border-left-color: #e74c3c; }
+        /* Reports */
+        .report-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .report-stat { background: #f8f9fa; border-radius: 10px; padding: 16px; text-align: center; border: 1px solid #ecf0f1; }
+        .report-stat-val { font-size: 32px; font-weight: 700; color: #2c3e50; }
+        .report-stat-lbl { font-size: 12px; color: #95a5a6; text-transform: uppercase; font-weight: 600; margin-top: 4px; }
+        .gender-bars { display: flex; flex-direction: column; gap: 12px; }
+        .gender-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+        .gender-label { width: 80px; font-weight: 600; text-transform: capitalize; }
+        .gender-bar-wrap { flex: 1; background: #ecf0f1; border-radius: 20px; height: 12px; overflow: hidden; }
+        .gender-bar-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg,#3498db,#2980b9); }
+        .gender-count { width: 30px; text-align: right; font-weight: 700; }
+        .date-filter { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 24px; padding: 16px; background: #f8f9fa; border-radius: 10px; }
+        .date-filter .form-group { margin: 0; }
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .menu-toggle { display: block; }
+            .content-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">🏥</div>
+        <div class="sidebar-title">MMS</div>
+    </div>
+    <ul class="sidebar-menu">
+        <li><a class="sidebar-menu-link active" onclick="navigateTo('dashboard',this)"><span class="sidebar-menu-icon">📊</span><span>Dashboard</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('admissions',this)"><span class="sidebar-menu-icon">📋</span><span>New Admission</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('records',this)"><span class="sidebar-menu-icon">📁</span><span>Records</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('storage',this)"><span class="sidebar-menu-icon">📦</span><span>Storage Units</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('identification',this)"><span class="sidebar-menu-icon">🔍</span><span>Identification</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('releases',this)"><span class="sidebar-menu-icon">📤</span><span>Releases</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('reports',this)"><span class="sidebar-menu-icon">📊</span><span>Reports</span></a></li>
+        <li><a class="sidebar-menu-link" onclick="navigateTo('settings',this)"><span class="sidebar-menu-icon">⚙️</span><span>Settings</span></a></li>
+        <li style="border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">
+            <a class="sidebar-menu-link" onclick="logout()" style="color:#e74c3c;">
+                <span class="sidebar-menu-icon">🚪</span><span>Logout</span>
+            </a>
+        </li>
+    </ul>
+</aside>
+
+<div class="main-content">
+    <nav class="navbar">
+        <div class="navbar-left">
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <div class="navbar-title" id="pageTitle">Dashboard</div>
+        </div>
+        <div class="navbar-right">
+            <div class="search-box"><span>🔍</span><input type="text" placeholder="Search..."></div>
+            <button class="icon-btn">🔔<span class="notification-badge">3</span></button>
+            <div class="user-profile">
+                <div class="user-avatar" id="userInitial">A</div>
+                <div><div class="user-name" id="userName">Admin</div><div class="user-role">Administrator</div></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="alertContainer"></div>
+
+        <!-- ══════════════ DASHBOARD ══════════════ -->
+        <div id="dashboard-page" class="page">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Welcome back! Here's what's happening today.</p>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon">👤</div><div class="stat-label">Active Bodies</div><div class="stat-value" id="activeBodies">0</div></div>
+                <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">Identified</div><div class="stat-value" id="identified">0</div></div>
+                <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-label">Released</div><div class="stat-value" id="released">0</div></div>
+                <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">Storage Usage</div><div class="stat-value" id="storageUsage">0%</div></div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-header"><div class="card-title">📋 Recent Admissions</div></div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead><tr><th>Case #</th><th>Name</th><th>Date</th><th>Age</th><th>Storage</th><th>Status</th></tr></thead>
+                            <tbody id="recentAdmissionsBody"><tr><td colspan="6" style="text-align:center;color:#95a5a6;padding:24px;">No admissions yet</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><div class="card-title">⚡ Quick Actions</div></div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="navigateTo('admissions',null)">➕ New Admission</button>
+                        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="navigateTo('releases',null)">📤 Process Release</button>
+                        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="navigateTo('reports',null)">📊 View Reports</button>
+                        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="navigateTo('storage',null)">📦 Storage Status</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ NEW ADMISSION ══════════════ -->
+        <div id="admissions-page" class="page" style="display:none;">
+            <h1 class="page-title">New Admission</h1>
+            <p class="page-subtitle">Register a new body admission to the morgue facility</p>
+            <div class="card">
+                <form id="admissionForm" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Case Number *</label><input type="text" id="caseNumber" placeholder="CASE-2026-0001"></div>
+                        <div class="form-group"><label>Name of Deceased</label><input type="text" id="deceasedName" placeholder="Full name (if known)"></div>
+                        <div class="form-group"><label>Date of Admission *</label><input type="date" id="admissionDate"></div>
+                        <div class="form-group"><label>Time of Admission *</label><input type="time" id="admissionTime"></div>
+                        <div class="form-group"><label>Height (meters) *</label><input type="number" id="height" step="0.01" min="0.5" max="2.5" placeholder="1.75"></div>
+                        <div class="form-group"><label>Weight (kg) *</label><input type="number" id="weight" step="0.1" min="0" max="300" placeholder="70.5"></div>
+                        <div class="form-group"><label>Age (years) *</label><input type="number" id="age" min="0" max="150" placeholder="45"></div>
+                        <div class="form-group"><label>Skin Tone *</label>
+                            <select id="skinTone">
+                                <option value="">Select Skin Tone</option>
+                                <option value="very_fair">Very Fair</option>
+                                <option value="fair">Fair</option>
+                                <option value="medium">Medium</option>
+                                <option value="olive">Olive</option>
+                                <option value="tan">Tan</option>
+                                <option value="deep_brown">Deep Brown</option>
+                                <option value="black">Black</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Gender *</label>
+                            <select id="gender">
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                                <option value="unknown">Unknown</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Storage Unit *</label>
+                            <select id="storageUnit">
+                                <option value="">Select Storage Unit</option>
+                                <option value="A-01">A-01 (Freezer)</option>
+                                <option value="A-02">A-02 (Freezer)</option>
+                                <option value="A-03">A-03 (Freezer)</option>
+                                <option value="A-04">A-04 (Freezer)</option>
+                                <option value="B-01">B-01 (Refrigerator)</option>
+                                <option value="B-02">B-02 (Refrigerator)</option>
+                                <option value="C-01">C-01 (Shelf)</option>
+                                <option value="C-02">C-02 (Shelf)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Cause of Death</label><textarea id="causeOfDeath" placeholder="Describe the cause or apparent cause of death..."></textarea></div>
+                    <div class="form-group"><label>Distinguishing Marks *</label><textarea id="distinguishingMarks" placeholder="Describe scars, tattoos, birthmarks..."></textarea></div>
+                    <div class="form-group"><label>Additional Notes</label><textarea id="additionalNotes" placeholder="Any additional observations..."></textarea></div>
+                    <div style="display:flex;gap:12px;margin-top:8px;">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">💾 Submit Admission</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetAdmissionForm()">🔄 Clear</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ══════════════ RECORDS ══════════════ -->
+        <div id="records-page" class="page" style="display:none;">
+            <h1 class="page-title">All Records</h1>
+            <p class="page-subtitle">View and manage all admission records</p>
+            <div class="card">
+                <div class="card-header"><div class="card-title">📁 Admission Records</div></div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>Case #</th><th>Name</th><th>Date</th><th>Age</th><th>Height</th><th>Weight</th><th>Gender</th><th>Cause of Death</th><th>Storage</th><th>Status</th></tr></thead>
+                        <tbody id="allRecordsBody"><tr><td colspan="10" style="text-align:center;color:#95a5a6;padding:24px;">No records found</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ STORAGE UNITS ══════════════ -->
+        <div id="storage-page" class="page" style="display:none;">
+            <h1 class="page-title">Storage Units</h1>
+            <p class="page-subtitle">Live capacity across all freezers, refrigerators and shelves</p>
+
+            <!-- Summary cards by type -->
+            <div class="storage-summary-grid" id="storageSummaryCards"></div>
+
+            <!-- Detail table -->
+            <div class="card">
+                <div class="card-header"><div class="card-title">📦 Unit-by-Unit Detail</div></div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>Unit #</th><th>Type</th><th>Capacity</th><th>Occupied</th><th>Available</th><th>Temperature</th><th>Occupancy</th><th>Status</th></tr></thead>
+                        <tbody id="storageDetailBody"><tr><td colspan="8" style="text-align:center;color:#95a5a6;padding:24px;">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ IDENTIFICATION ══════════════ -->
+        <div id="identification-page" class="page" style="display:none;">
+            <h1 class="page-title">Identification</h1>
+            <div class="card"><p style="text-align:center;color:#95a5a6;padding:40px;">🔍 Coming soon</p></div>
+        </div>
+
+        <!-- ══════════════ RELEASES ══════════════ -->
+        <div id="releases-page" class="page" style="display:none;">
+            <h1 class="page-title">Releases</h1>
+            <p class="page-subtitle">Process and record body releases to next of kin or funeral homes</p>
+
+            <div class="content-grid">
+                <!-- Release form -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">📤 Process New Release</div></div>
+                    <form id="releaseForm" novalidate>
+                        <div class="form-group">
+                            <label>Select Active Admission *</label>
+                            <select id="releaseAdmissionId">
+                                <option value="">— Select a case —</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="selectedCaseInfo" style="display:none;">
+                            <div style="background:#f8f9fa;border-radius:8px;padding:14px;font-size:13px;border:1px solid #ecf0f1;">
+                                <strong id="selectedCaseName">—</strong><br>
+                                <span style="color:#95a5a6;" id="selectedCaseDetails">—</span>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Release Date *</label><input type="date" id="releaseDate"></div>
+                            <div class="form-group"><label>Release Time *</label><input type="time" id="releaseTime"></div>
+                            <div class="form-group"><label>Released To (Full Name) *</label><input type="text" id="releasedTo" placeholder="John Doe"></div>
+                            <div class="form-group"><label>Relationship *</label>
+                                <select id="relationship">
+                                    <option value="">Select Relationship</option>
+                                    <option value="Next of Kin">Next of Kin</option>
+                                    <option value="Spouse">Spouse</option>
+                                    <option value="Parent">Parent</option>
+                                    <option value="Sibling">Sibling</option>
+                                    <option value="Funeral Home">Funeral Home</option>
+                                    <option value="Legal Representative">Legal Representative</option>
+                                    <option value="Government Authority">Government Authority</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Collector's ID Number *</label><input type="text" id="idNumber" placeholder="National ID / Passport"></div>
+                            <div class="form-group"><label>Authorized By (Staff) *</label><input type="text" id="authorizedBy" placeholder="Staff member name"></div>
+                        </div>
+                        <div class="form-group"><label>Release Notes</label><textarea id="releaseNotes" placeholder="Any additional notes about the release..."></textarea></div>
+                        <button type="submit" class="btn btn-primary" id="releaseSubmitBtn">📤 Process Release</button>
+                    </form>
+                </div>
+
+                <!-- Recent releases -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">🕐 Recent Releases</div></div>
+                    <div id="recentReleasesList" style="display:flex;flex-direction:column;gap:12px;">
+                        <p style="text-align:center;color:#95a5a6;padding:20px;">No releases yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full release history table -->
+            <div class="card">
+                <div class="card-header"><div class="card-title">📋 Release History</div></div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>Case #</th><th>Name</th><th>Released To</th><th>Relationship</th><th>Date</th><th>Authorized By</th></tr></thead>
+                        <tbody id="releaseHistoryBody"><tr><td colspan="6" style="text-align:center;color:#95a5a6;padding:24px;">No history yet</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ REPORTS ══════════════ -->
+        <div id="reports-page" class="page" style="display:none;">
+            <h1 class="page-title">Reports</h1>
+            <p class="page-subtitle">Statistics and insights for your morgue facility</p>
+
+            <!-- Date filter -->
+            <div class="date-filter">
+                <div class="form-group"><label>From Date</label><input type="date" id="reportFrom"></div>
+                <div class="form-group"><label>To Date</label><input type="date" id="reportTo"></div>
+                <button class="btn btn-primary btn-sm" onclick="loadReports()">🔍 Filter</button>
+                <button class="btn btn-secondary btn-sm" onclick="clearReportFilter()">✕ Clear</button>
+            </div>
+
+            <!-- Summary stats -->
+            <div class="report-stats" id="reportStats">
+                <div class="report-stat"><div class="report-stat-val" id="rTotal">—</div><div class="report-stat-lbl">Total Admissions</div></div>
+                <div class="report-stat"><div class="report-stat-val" id="rActive">—</div><div class="report-stat-lbl">Currently Active</div></div>
+                <div class="report-stat"><div class="report-stat-val" id="rReleased">—</div><div class="report-stat-lbl">Released</div></div>
+                <div class="report-stat"><div class="report-stat-val" id="rOccupancy">—</div><div class="report-stat-lbl">Occupancy Rate</div></div>
+            </div>
+
+            <div class="content-grid">
+                <!-- Gender breakdown -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">👥 Admissions by Gender</div></div>
+                    <div class="gender-bars" id="genderBars">
+                        <p style="color:#95a5a6;">Loading...</p>
+                    </div>
+                </div>
+
+                <!-- Monthly trend -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">📅 Monthly Trend (6 months)</div></div>
+                    <div id="monthlyTrend" style="display:flex;flex-direction:column;gap:10px;">
+                        <p style="color:#95a5a6;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent releases in reports -->
+            <div class="card">
+                <div class="card-header"><div class="card-title">📤 Recent Releases</div></div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>Case #</th><th>Name</th><th>Released To</th><th>Relationship</th><th>Release Date</th><th>Authorized By</th></tr></thead>
+                        <tbody id="reportReleasesBody"><tr><td colspan="6" style="text-align:center;color:#95a5a6;padding:24px;">No data</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ SETTINGS ══════════════ -->
+        <div id="settings-page" class="page" style="display:none;">
+            <h1 class="page-title">Settings</h1>
+            <div class="card"><p style="text-align:center;color:#95a5a6;padding:40px;">⚙️ Coming soon</p></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api';
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+    const username = sessionStorage.getItem('username') || 'Admin';
+    document.getElementById('userName').textContent    = username.charAt(0).toUpperCase() + username.slice(1);
+    document.getElementById('userInitial').textContent = username.charAt(0).toUpperCase();
+    document.getElementById('admissionDate').valueAsDate = new Date();
+    document.getElementById('releaseDate').valueAsDate   = new Date();
+
+    loadDashboardData();
+
+    // Form handlers
+    document.getElementById('admissionForm').addEventListener('submit', submitAdmission);
+    document.getElementById('releaseForm').addEventListener('submit', submitRelease);
+
+    // When a case is selected in the release form, show info
+    document.getElementById('releaseAdmissionId').addEventListener('change', onReleaseSelectChange);
+
+    document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+});
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function navigateTo(page, el) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    document.getElementById(page + '-page').style.display = 'block';
+    const titles = { dashboard:'Dashboard', admissions:'New Admission', records:'All Records', storage:'Storage Units', identification:'Identification', releases:'Releases', reports:'Reports', settings:'Settings' };
+    document.getElementById('pageTitle').textContent = titles[page] || page;
+    document.querySelectorAll('.sidebar-menu-link').forEach(l => l.classList.remove('active'));
+    if (el) { const link = el.closest ? el.closest('.sidebar-menu-link') : el; if (link) link.classList.add('active'); }
+    if (page === 'records')    loadRecords();
+    if (page === 'storage')    loadStorage();
+    if (page === 'releases')   loadReleasesPage();
+    if (page === 'reports')    loadReports();
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+function loadDashboardData() {
+    fetch(API + '/admissions')
+    .then(r => r.json())
+    .then(data => {
+        const all      = data.admissions || [];
+        const active   = all.filter(a => a.status === 'active');
+        const released = all.filter(a => a.status === 'released');
+        document.getElementById('activeBodies').textContent = active.length;
+        document.getElementById('identified').textContent   = Math.floor(active.length * 0.3);
+        document.getElementById('released').textContent     = released.length;
+
+        const tbody = document.getElementById('recentAdmissionsBody');
+        if (active.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#95a5a6;padding:24px;">No admissions yet</td></tr>';
+        } else {
+            tbody.innerHTML = active.slice(0, 5).map(a => `
+                <tr>
+                    <td><strong>${a.case_number}</strong></td>
+                    <td>${a.deceased_name || '—'}</td>
+                    <td>${a.admission_date}</td>
+                    <td>${a.age}</td>
+                    <td>${a.storage_unit}</td>
+                    <td><span class="badge badge-success">Active</span></td>
+                </tr>`).join('');
+        }
+    })
+    .catch(e => console.error('Dashboard load error:', e));
+
+    // Storage usage for stat card
+    fetch(API + '/storage')
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+        const units   = data.units || [];
+        const total   = units.reduce((s, u) => s + u.capacity, 0);
+        const occupied = units.reduce((s, u) => s + u.occupied, 0);
+        document.getElementById('storageUsage').textContent = total ? Math.round((occupied / total) * 100) + '%' : '0%';
+    })
+    .catch(() => {});
+}
+
+// ── RECORDS ──────────────────────────────────────────────────────────────────
+function loadRecords() {
+    fetch(API + '/admissions')
+    .then(r => r.json())
+    .then(data => {
+        const admissions = data.admissions || [];
+        const tbody = document.getElementById('allRecordsBody');
+        if (!admissions.length) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#95a5a6;padding:24px;">No records found</td></tr>';
+        } else {
+            tbody.innerHTML = admissions.map(a => `
+                <tr>
+                    <td><strong>${a.case_number}</strong></td>
+                    <td>${a.deceased_name || '—'}</td>
+                    <td>${a.admission_date}</td>
+                    <td>${a.age}</td>
+                    <td>${a.height}m</td>
+                    <td>${a.weight}kg</td>
+                    <td>${a.gender}</td>
+                    <td>${a.cause_of_death ? a.cause_of_death.substring(0,30)+'…' : '—'}</td>
+                    <td>${a.storage_unit}</td>
+                    <td><span class="badge ${a.status==='released'?'badge-info':'badge-success'}">${a.status}</span></td>
+                </tr>`).join('');
+        }
+    })
+    .catch(e => console.error('Records load error:', e));
+}
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+function loadStorage() {
+    document.getElementById('storageDetailBody').innerHTML =
+        '<tr><td colspan="8" style="text-align:center;color:#95a5a6;padding:24px;">Loading...</td></tr>';
+
+    fetch(API + '/storage')
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+        const units   = data.units   || [];
+        const summary = data.summary || {};
+
+        // Summary cards
+        const icons = { Freezer:'🧊', Refrigerator:'❄️', Shelf:'🗄️' };
+        document.getElementById('storageSummaryCards').innerHTML = Object.entries(summary).map(([type, s]) => {
+            const pct   = s.total ? Math.round((s.occupied / s.total) * 100) : 0;
+            const cls   = pct >= 100 ? 'full' : pct >= 70 ? 'warn' : 'good';
+            const barCls = pct >= 100 ? 'fill-full' : pct >= 70 ? 'fill-warn' : 'fill-good';
+            return `
+            <div class="storage-type-card">
+                <div class="storage-type-header">
+                    <div class="storage-type-name">${icons[type]||'📦'} ${type}s</div>
+                    <div class="storage-avail-count ${cls}">${s.available} free</div>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill ${barCls}" style="width:${pct}%"></div>
+                </div>
+                <div class="storage-meta">${s.occupied} / ${s.total} slots occupied (${pct}%)</div>
+            </div>`;
+        }).join('');
+
+        // Detail table
+        document.getElementById('storageDetailBody').innerHTML = units.map(u => {
+            const pct    = u.capacity ? Math.round((u.occupied / u.capacity) * 100) : 0;
+            const barCls = pct >= 100 ? 'fill-full' : pct >= 70 ? 'fill-warn' : 'fill-good';
+            const statusBadge = u.available > 0 ? 'badge-success' : 'badge-danger';
+            const statusText  = u.available > 0 ? 'Available' : 'Full';
+            return `
+            <tr>
+                <td><strong>${u.unit_code}</strong></td>
+                <td>${u.unit_type}</td>
+                <td>${u.capacity}</td>
+                <td>${u.occupied}</td>
+                <td><strong>${u.available}</strong></td>
+                <td>${u.temperature}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div class="progress-bar-wrap" style="flex:1;height:8px;">
+                            <div class="progress-bar-fill ${barCls}" style="width:${pct}%"></div>
+                        </div>
+                        <span style="font-size:11px;color:#95a5a6;width:32px;">${pct}%</span>
+                    </div>
+                </td>
+                <td><span class="badge ${statusBadge}">${statusText}</span></td>
+            </tr>`;
+        }).join('');
+    })
+    .catch(e => { console.error('Storage load error:', e); });
+}
+
+// ── RELEASES ─────────────────────────────────────────────────────────────────
+function loadReleasesPage() {
+    // Populate the select with active admissions
+    fetch(API + '/admissions')
+    .then(r => r.json())
+    .then(data => {
+        const active = (data.admissions || []).filter(a => a.status === 'active');
+        const sel    = document.getElementById('releaseAdmissionId');
+        sel.innerHTML = '<option value="">— Select a case —</option>' +
+            active.map(a => `<option value="${a.id}" data-name="${a.deceased_name||'Unknown'}" data-case="${a.case_number}" data-storage="${a.storage_unit}" data-age="${a.age}">
+                ${a.case_number} — ${a.deceased_name || 'Unidentified'}</option>`).join('');
+    })
+    .catch(e => console.error(e));
+
+    // Load release history
+    fetch(API + '/releases')
+    .then(r => r.json())
+    .then(data => {
+        const releases = data.releases || [];
+
+        // Recent releases sidebar
+        const recentEl = document.getElementById('recentReleasesList');
+        if (!releases.length) {
+            recentEl.innerHTML = '<p style="text-align:center;color:#95a5a6;padding:20px;">No releases yet</p>';
+        } else {
+            recentEl.innerHTML = releases.slice(0, 5).map(r => `
+                <div style="border:1px solid #ecf0f1;border-radius:8px;padding:12px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <strong>${r.case_number}</strong>
+                        <span class="badge badge-info">Released</span>
+                    </div>
+                    <div style="font-size:13px;color:#34495e;">${r.deceased_name || 'Unidentified'}</div>
+                    <div style="font-size:12px;color:#95a5a6;margin-top:4px;">
+                        → ${r.released_to} (${r.relationship})<br>${r.release_date}
+                    </div>
+                </div>`).join('');
+        }
+
+        // Full history table
+        const tbody = document.getElementById('releaseHistoryBody');
+        if (!releases.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#95a5a6;padding:24px;">No history yet</td></tr>';
+        } else {
+            tbody.innerHTML = releases.map(r => `
+                <tr>
+                    <td><strong>${r.case_number}</strong></td>
+                    <td>${r.deceased_name || '—'}</td>
+                    <td>${r.released_to}</td>
+                    <td>${r.relationship}</td>
+                    <td>${r.release_date}</td>
+                    <td>${r.authorized_by}</td>
+                </tr>`).join('');
+        }
+    })
+    .catch(e => console.error('Releases load error:', e));
+}
+
+function onReleaseSelectChange() {
+    const sel  = document.getElementById('releaseAdmissionId');
+    const opt  = sel.options[sel.selectedIndex];
+    const info = document.getElementById('selectedCaseInfo');
+    if (!sel.value) { info.style.display = 'none'; return; }
+    document.getElementById('selectedCaseName').textContent    = opt.dataset.name || 'Unidentified';
+    document.getElementById('selectedCaseDetails').textContent = `Case: ${opt.dataset.case} | Storage: ${opt.dataset.storage} | Age: ${opt.dataset.age}`;
+    info.style.display = 'block';
+}
+
+function submitRelease(event) {
+    event.preventDefault();
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+
+    const fields = {
+        releaseAdmissionId: document.getElementById('releaseAdmissionId'),
+        releaseDate:        document.getElementById('releaseDate'),
+        releaseTime:        document.getElementById('releaseTime'),
+        releasedTo:         document.getElementById('releasedTo'),
+        relationship:       document.getElementById('relationship'),
+        idNumber:           document.getElementById('idNumber'),
+        authorizedBy:       document.getElementById('authorizedBy'),
+    };
+
+    let hasError = false;
+    Object.values(fields).forEach(el => {
+        if (!el.value.trim()) { el.classList.add('field-error'); hasError = true; }
+    });
+    if (hasError) { showAlert('error', '❌ Please fill in all required fields.'); return; }
+
+    const payload = {
+        admissionId:  fields.releaseAdmissionId.value,
+        releaseDate:  fields.releaseDate.value,
+        releaseTime:  fields.releaseTime.value,
+        releasedTo:   fields.releasedTo.value.trim(),
+        relationship: fields.relationship.value,
+        idNumber:     fields.idNumber.value.trim(),
+        authorizedBy: fields.authorizedBy.value.trim(),
+        notes:        document.getElementById('releaseNotes').value.trim()
+    };
+
+    console.log('📤 Release payload:', payload);
+    const btn = document.getElementById('releaseSubmitBtn');
+    btn.innerHTML = '⏳ Processing...'; btn.disabled = true;
+
+    fetch(API + '/releases', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+    })
+    .then(r => r.text())
+    .then(raw => {
+        console.log('Release response:', raw);
+        const result = JSON.parse(raw);
+        if (result.success) {
+            showAlert('success', '✅ Body released successfully!');
+            document.getElementById('releaseForm').reset();
+            document.getElementById('selectedCaseInfo').style.display = 'none';
+            loadReleasesPage();
+            loadDashboardData();
+        } else {
+            showAlert('error', '❌ ' + result.message);
+        }
+    })
+    .catch(e => { showAlert('error', '❌ Network error: ' + e.message); console.error(e); })
+    .finally(() => { btn.innerHTML = '📤 Process Release'; btn.disabled = false; });
+}
+
+// ── REPORTS ──────────────────────────────────────────────────────────────────
+function loadReports() {
+    const from = document.getElementById('reportFrom').value;
+    const to   = document.getElementById('reportTo').value;
+    const qs   = from && to ? `?from=${from}&to=${to}` : '';
+
+    fetch(API + '/reports' + qs)
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+        const { stats, byGender, monthly, recentReleases } = data;
+
+        document.getElementById('rTotal').textContent    = stats.total;
+        document.getElementById('rActive').textContent   = stats.active;
+        document.getElementById('rReleased').textContent = stats.released;
+        document.getElementById('rOccupancy').textContent = stats.total
+            ? Math.round((stats.active / stats.total) * 100) + '%' : '0%';
+
+        // Gender bars
+        const maxGender = Math.max(...(byGender.map(g => g.count)), 1);
+        document.getElementById('genderBars').innerHTML = byGender.length
+            ? byGender.map(g => `
+                <div class="gender-row">
+                    <div class="gender-label">${g.gender}</div>
+                    <div class="gender-bar-wrap">
+                        <div class="gender-bar-fill" style="width:${Math.round((g.count/maxGender)*100)}%"></div>
+                    </div>
+                    <div class="gender-count">${g.count}</div>
+                </div>`).join('')
+            : '<p style="color:#95a5a6;">No data</p>';
+
+        // Monthly trend
+        const maxMonth = Math.max(...(monthly.map(m => m.count)), 1);
+        document.getElementById('monthlyTrend').innerHTML = monthly.length
+            ? monthly.map(m => `
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                    <div style="width:70px;color:#95a5a6;">${m.month}</div>
+                    <div style="flex:1;background:#ecf0f1;border-radius:20px;height:10px;overflow:hidden;">
+                        <div style="width:${Math.round((m.count/maxMonth)*100)}%;height:100%;border-radius:20px;background:linear-gradient(90deg,#34495e,#2c3e50);"></div>
+                    </div>
+                    <div style="width:24px;font-weight:700;">${m.count}</div>
+                </div>`).join('')
+            : '<p style="color:#95a5a6;">No data for last 6 months</p>';
+
+        // Recent releases table
+        const tbody = document.getElementById('reportReleasesBody');
+        tbody.innerHTML = recentReleases.length
+            ? recentReleases.map(r => `
+                <tr>
+                    <td><strong>${r.case_number}</strong></td>
+                    <td>${r.deceased_name || '—'}</td>
+                    <td>${r.released_to}</td>
+                    <td>${r.relationship}</td>
+                    <td>${r.release_date}</td>
+                    <td>${r.authorized_by}</td>
+                </tr>`).join('')
+            : '<tr><td colspan="6" style="text-align:center;color:#95a5a6;padding:24px;">No releases yet</td></tr>';
+    })
+    .catch(e => console.error('Reports load error:', e));
+}
+
+function clearReportFilter() {
+    document.getElementById('reportFrom').value = '';
+    document.getElementById('reportTo').value   = '';
+    loadReports();
+}
+
+// ── ADMISSION FORM ───────────────────────────────────────────────────────────
+function submitAdmission(event) {
+    event.preventDefault();
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+
+    const requiredIds = ['caseNumber','admissionDate','admissionTime','height','weight','age','skinTone','gender','storageUnit','distinguishingMarks'];
+    let hasError = false;
+    requiredIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.value.trim()) { el.classList.add('field-error'); hasError = true; }
+    });
+    if (hasError) { showAlert('error', '❌ Please fill in all required fields (highlighted red).'); return; }
+
+    const payload = {
+        caseNumber:          document.getElementById('caseNumber').value.trim(),
+        deceasedName:        document.getElementById('deceasedName').value.trim(),
+        admissionDate:       document.getElementById('admissionDate').value,
+        admissionTime:       document.getElementById('admissionTime').value,
+        height:              parseFloat(document.getElementById('height').value),
+        weight:              parseFloat(document.getElementById('weight').value),
+        age:                 parseInt(document.getElementById('age').value),
+        skinTone:            document.getElementById('skinTone').value,
+        gender:              document.getElementById('gender').value,
+        causeOfDeath:        document.getElementById('causeOfDeath').value.trim(),
+        storageUnit:         document.getElementById('storageUnit').value,
+        distinguishingMarks: document.getElementById('distinguishingMarks').value.trim(),
+        additionalNotes:     document.getElementById('additionalNotes').value.trim()
+    };
+
+    console.log('📤 Admission payload:', payload);
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML = '⏳ Saving...'; btn.disabled = true;
+
+    fetch(API + '/admissions', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+    })
+    .then(r => r.text())
+    .then(raw => {
+        console.log('Admission response:', raw);
+        const result = JSON.parse(raw);
+        if (result.success) {
+            showAlert('success', '✅ Admission saved successfully!');
+            resetAdmissionForm();
+            loadDashboardData();
+        } else {
+            showAlert('error', '❌ ' + result.message);
+        }
+    })
+    .catch(e => { showAlert('error', '❌ Network error: ' + e.message); console.error(e); })
+    .finally(() => { btn.innerHTML = '💾 Submit Admission'; btn.disabled = false; });
+}
+
+function resetAdmissionForm() {
+    document.getElementById('admissionForm').reset();
+    document.getElementById('admissionDate').valueAsDate = new Date();
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function showAlert(type, message) {
+    const el = document.createElement('div');
+    el.className = `alert alert-${type}`;
+    el.textContent = message;
+    document.getElementById('alertContainer').appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+    }
+}
+</script>
+</body>
+</html>
